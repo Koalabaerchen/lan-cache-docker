@@ -1,0 +1,45 @@
+Vielleicht könnt ihr relevante Änderungen auch hier oben einfügen. Glaube
+Englisch/Deutsch ist Wurst, je nach Geschmack und Gewohnheit.
+
+### Changes by Jens 21.10.2018 ###
+
+nginx.conf:
+output_buffers 2 8m; # uses less RAM (cache)
+proxy_cache_lock_age 120s; # added this value in case many geeks try to download the same game, default 5s: If the last request passed to the proxied server for populating a new cache element has not completed for the specified time, one more request may be passed to the proxied server. 
+#proxy_read_timeout 300s; # removed this custom config (not set in lan-docker-cache by default), nginx default 60s should be fine and omits too many open connections
+
+### Changes by Alex 20.10.2018 ###
+vm.swapiness zurueck auf 100. Das war bewusst explizit auf 100, um file
+system cache den vorrang vor applikationscache zu geben. Der auf der Seite
+beschriebene Effekt dass Docker swappt ist in top nicht zu sehen
+
+### Changes by Jens 19.10.2018 ###
+
+Compiled original kernel version from source with old config and missing "Optional Features" from Docker check-config
+To check: 
+curl https://raw.githubusercontent.com/docker/docker/master/contrib/check-config.sh | bash
+Kernel flags:
+CONFIG_MEMCG_SWAP_ENABLED
+CONFIG_RT_GROUP_SCHED 
+
+Added kernel options to /boot/grub/menu.lst (/etc/default/grub are currently ignored for some reason): cgroup_enable=memory swapaccount=1
+
+Changed /etc/sysctl.conf values:
+# see https://success.docker.com/article/node-using-swap-memory-instead-of-host-memory (value is automatically used in docker container)
+vm.swappiness = 0
+vm.overcommit_memory = 1
+
+With overcommit memory docker finally uses more than 2GB of memory and now uses all available memory if required.
+
+Changes to nginx.conf:
+
+worker_processes 4; # should be same as auto -> number of cores
+worker_rlimit_nofile 16384; # worker_processes * worker_connections
+
+events.worker_connections = 4096; # should be enough
+
+# These values might be worth a little tuning. At least keep in mind to change directio / output_buffers combination if RAM usage is to high/low.
+directio 512;
+#directio_alignment 512;
+output_buffers 3 8m;
+
